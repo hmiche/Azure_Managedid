@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CosmosClient } from '@azure/cosmos';
-import { AzureCliCredential } from '@azure/identity';
+import { DefaultAzureCredential } from '@azure/identity';
 
 @Injectable()
 export class CosmosService {
@@ -9,8 +9,8 @@ export class CosmosService {
 
   constructor() {
     try {
-      const credential = new AzureCliCredential();
-      this.logger.log('Azure CLI credential created successfully');
+      const credential = new DefaultAzureCredential();
+      this.logger.log('Azure Default credential created successfully');
 
       this.client = new CosmosClient({
         endpoint: process.env.COSMOS_ENDPOINT,
