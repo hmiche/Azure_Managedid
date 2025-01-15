@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CosmosClient } from '@azure/cosmos';
+import { CosmosClient, Container } from '@azure/cosmos';
 import { DefaultAzureCredential } from '@azure/identity';
 
 @Injectable()
@@ -26,6 +26,15 @@ export class CosmosService {
     }
   }
 
+  private async getContainer(containerId: string): Promise<Container> {
+    const database = this.client.database(process.env.COSMOS_DATABASE);
+    const { container } = await database.containers.createIfNotExists({
+      id: containerId,
+      partitionKey: '/id',
+    });
+    return container;
+  }
+
   async testConnection() {
     try {
       this.logger.log(
@@ -39,6 +48,44 @@ export class CosmosService {
     } catch (error) {
       this.logger.error('Connection test failed:', error.message);
       throw new Error(`Failed to connect: ${error.message}`);
+    }
+  }
+
+  async createDummyData() {
+    try {
+      const container = await this.getContainer('azuredb');
+
+      const dummyItem = {
+        id: new Date().getTime().toString(),
+        name: 'Test Item',
+        description: 'This is a test item',
+        createdAt: new Date().toISOString(),
+      };
+
+      const { resource } = await container.items.create(dummyItem);
+      this.logger.log('Successfully created dummy data');
+      return resource;
+    } catch (error) {
+      this.logger.error('Failed to create dummy data:', error.message);
+      throw new Error(`Failed to create dummy data: ${error.message}`);
+    }
+  }
+
+  async readDummyData() {
+    try {
+      const container = this.client
+        .database(process.env.COSMOS_DATABASE)
+        .container('azuredb');
+
+      const { resources } = await container.items
+        .query('SELECT * FROM c')
+        .fetchAll();
+
+      this.logger.log(`Successfully retrieved ${resources.length} items`);
+      return resources;
+    } catch (error) {
+      this.logger.error('Failed to read data:', error.message);
+      throw new Error(`Failed to read data: ${error.message}`);
     }
   }
 }
